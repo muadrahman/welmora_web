@@ -10,6 +10,23 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --color-growth-green: #4BB100;
+  --color-trust-teal: #0B2C2C;
+
+  --animate-quiet-pulse: quiet-pulse 8s linear infinite;
+
+  @keyframes quiet-pulse {
+
+    0%,
+    100% {
+      opacity: 0.40;
+    }
+
+    50% {
+      opacity: 0.70;
+    }
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,4 +40,8 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
 }
