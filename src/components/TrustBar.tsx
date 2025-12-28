@@ -9,13 +9,13 @@ export default function TrustBar() {
                 {/* Secure Data */}
                 <div className="flex items-center gap-3 opacity-60 hover:opacity-100 transition-opacity duration-300">
                     <ShieldCheck className="w-6 h-6 text-gray-600" strokeWidth={1.5} />
-                    <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Secure Data</span>
+                    <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">SSL Encrypted</span>
                 </div>
 
                 {/* Privacy First */}
                 <div className="flex items-center gap-3 opacity-60 hover:opacity-100 transition-opacity duration-300">
                     <Lock className="w-6 h-6 text-gray-600" strokeWidth={1.5} />
-                    <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Privacy First</span>
+                    <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Privacy Protected</span>
                 </div>
 
                 {/* Cloud Encrypted */}

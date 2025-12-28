@@ -1,17 +1,12 @@
-import Image from "next/image";
-import QRCodeWidget from "@/components/QRCodeWidget";
 import FeatureSection from "@/components/FeatureSection";
-import Footer from "@/components/Footer";
 import ContactForm from "@/components/ContactForm";
-import Header from "@/components/Header";
 import AppStoreButtons from "@/components/AppStoreButtons";
 import TrustBar from "@/components/TrustBar";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col bg-white relative overflow-x-hidden pt-20">
-      <Header />
-      <div id="home" className="flex-grow flex flex-col items-center justify-center p-4 pt-20 pb-0">
+    <>
+      <div id="home" className="flex flex-col items-center justify-center p-4 py-20 min-h-[80vh]">
         <main className="flex flex-col items-center gap-8 text-center max-w-2xl z-10 animate-in fade-in zoom-in duration-500">
 
           {/* Main Heading */}
@@ -20,7 +15,7 @@ export default function Home() {
           </h1>
 
           {/* Sub-heading */}
-          <p className="text-xl sm:text-2xl text-gray-600 font-light">
+          <p className="text-xl sm:text-2xl text-gray-600 font-light tracking-tight leading-relaxed">
             Your Digital Financial Consultant for Long-Term Wealth.
           </p>
 
@@ -29,7 +24,7 @@ export default function Home() {
 
           {/* Trust Indicator */}
           <div className="flex items-center gap-2 mt-4">
-            <div className="w-8 h-8 rounded-full bg-growth-green/10 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-growth-green/10 flex items-center justify-center hover:brightness-110 transition-all">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -39,7 +34,7 @@ export default function Home() {
                 <path d="M20 6L9 17L4 12" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">Trusted by Investors</span>
+            <span className="text-sm font-medium text-gray-500 uppercase tracking-tight">Trusted by Investors</span>
           </div>
 
         </main>
@@ -54,12 +49,6 @@ export default function Home() {
       </div>
 
       <TrustBar />
-
-      <Footer />
-
-      {/* QR Code Widget */}
-      <QRCodeWidget />
-
-    </div>
+    </>
   );
 }

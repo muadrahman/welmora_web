@@ -2,6 +2,8 @@ import React from 'react';
 import Image from 'next/image';
 import { Youtube, Instagram, Linkedin, Twitter } from 'lucide-react';
 
+import Link from 'next/link';
+
 export default function Footer() {
     return (
         <footer className="w-full bg-[#F9FAFB] border-t border-gray-100 py-12">
@@ -29,6 +31,7 @@ export default function Footer() {
                 <div className="flex flex-col gap-3">
                     <h4 className="font-semibold text-gray-900 text-sm uppercase tracking-wider">Company</h4>
                     <a href="#" className="text-gray-500 hover:text-trust-teal transition-colors text-sm">About Us</a>
+                    <Link href="/faq" className="text-gray-500 hover:text-trust-teal transition-colors text-sm">FAQ</Link>
                     <a href="#" className="text-gray-500 hover:text-trust-teal transition-colors text-sm">Contact</a>
                 </div>
 

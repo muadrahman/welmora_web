@@ -33,10 +33,13 @@ export default function FeatureSection() {
                 {features.map((feature, index) => (
                     <div
                         key={index}
-                        className="group p-8 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
-                        style={{ animationDelay: `${index * 150}ms` }}
+                        className="group p-8 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+                        style={{
+                            animationDelay: `${index * 150}ms`,
+                            animationFillMode: 'both'
+                        }}
                     >
-                        <div className="w-12 h-12 bg-growth-green/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                        <div className="w-12 h-12 bg-growth-green/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 hover:brightness-110">
                             <feature.icon className="w-6 h-6 text-growth-green" strokeWidth={1.5} />
                         </div>
 
