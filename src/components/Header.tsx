@@ -58,8 +58,8 @@ export default function Header() {
     return (
         <header
             className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-center transition-all duration-300 ${isScrolled
-                    ? 'py-4 bg-white/70 backdrop-blur-md border-b border-trust-teal/10 shadow-sm'
-                    : 'py-6 bg-transparent border-transparent'
+                ? 'py-4 bg-white/70 backdrop-blur-md border-b border-trust-teal/10 shadow-sm'
+                : 'py-6 bg-transparent border-transparent'
                 }`}
         >
             <div className="w-full max-w-6xl px-8 flex items-center justify-between">
@@ -88,6 +88,9 @@ export default function Header() {
                     <Link href="/" className={getLinkClass('home')}>
                         Home
                     </Link>
+                    <Link href="/calculators" className={getLinkClass('calculators')}>
+                        Calculators
+                    </Link>
                     <Link href="/#features" className={getLinkClass('features')}>
                         Features
                     </Link>
@@ -113,6 +116,13 @@ export default function Header() {
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             Home
+                        </Link>
+                        <Link
+                            href="/calculators"
+                            className="text-lg font-semibold text-trust-teal"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            Calculators
                         </Link>
                         <Link
                             href="/#features"
