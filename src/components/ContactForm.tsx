@@ -36,8 +36,8 @@ export default function ContactForm() {
     }
 
     return (
-        <section className="w-full max-w-4xl mx-auto px-6 py-20">
-            <div className="text-center mb-12">
+        <section className="w-full max-w-4xl mx-auto px-6 pt-16 pb-12 !scroll-mt-0 min-h-screen flex flex-col justify-start bg-white relative z-10" id="support">
+            <div className="text-center mb-6">
                 <h2 className="text-3xl font-bold text-trust-teal mb-4">Support & Feedback</h2>
                 <p className="text-gray-600">We're here to help you plan your financial future.</p>
             </div>
@@ -57,21 +57,33 @@ export default function ContactForm() {
                             id="name"
                             name="name"
                             required
-                            className="w-full px-4 py-3 rounded-lg bg-white border border-gray-200 focus:border-trust-teal focus:ring-1 focus:ring-trust-teal outline-none transition-all placeholder:text-gray-400"
-                            placeholder="John Doe"
+                            className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-growth-green focus:ring-2 focus:ring-growth-green/20 outline-none transition-all placeholder:text-gray-400"
+                            placeholder="Sachin Tendulkar"
                         />
                     </div>
 
                     {/* Email Field */}
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="email" className="text-sm font-semibold text-gray-700">Email Address</label>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
                         <input
                             type="email"
                             id="email"
                             name="email"
                             required
-                            className="w-full px-4 py-3 rounded-lg bg-white border border-gray-200 focus:border-trust-teal focus:ring-1 focus:ring-trust-teal outline-none transition-all placeholder:text-gray-400"
-                            placeholder="john@example.com"
+                            className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-growth-green focus:ring-2 focus:ring-growth-green/20 outline-none transition-all placeholder:text-gray-400"
+                            placeholder="sachin.tendulkar@gmail.com"
+                        />
+                    </div>
+
+                    {/* Mobile Number Field */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Mobile Number</label>
+                        <input
+                            type="tel"
+                            id="mobile"
+                            name="mobile"
+                            className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-growth-green focus:ring-2 focus:ring-growth-green/20 outline-none transition-all placeholder:text-gray-400"
+                            placeholder="+91 8921945282"
                         />
                     </div>
 

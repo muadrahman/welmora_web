@@ -1,116 +1,119 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
-import { Shield, Wallet, Lock, ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
 
-const faqs = [
+// Data grouped by category
+const faqCategories = [
     {
-        category: "Security & Privacy",
-        icon: Shield,
+        title: "Core Concepts",
         items: [
             {
-                question: "How is my data encrypted?",
-                answer: "We use bank-grade 256-bit SSL encryption for all data transmission. At rest, your sensitive information is encrypted using AES-256 standards, ensuring that even in the unlikely event of a breach, your data remains unreadable."
+                question: "What is Goal-Based Planning?",
+                answer: "Most people save blindly. Goal-Based Planning turns your dreams (buying a home, education, retirement) into mathematical milestones. We calculate exactly how much you need to save today to hit those targets tomorrow, accounting for inflation and market performance."
             },
             {
-                question: "Do you sell my data?",
-                answer: "Never. Your privacy is our product. We do not sell, rent, or trade your personal information to third parties. Our business model is based on providing value to you, not advertisers."
+                question: "What is the FIRE Engine?",
+                answer: "FIRE stands for Financial Independence, Retire Early. Our FIRE Engine models your net worth, expenses, and passive income to predict the exact date your investments can fully support your lifestyle without active work."
+            },
+            {
+                question: "How does Debt Management work?",
+                answer: "We treat debt as a mathematical emergency. We use structured repayment algorithms (like the Avalanche or Snowball methods) to prioritize high-interest debt first. This minimizes total interest paid and frees up your cash flow for wealth building significantly faster."
+            },
+            {
+                question: "Does Welmora help with Tax Efficiency?",
+                answer: "Yes. Raw returns don't matter; money in your pocket does. Our calculators and planners account for post-tax returns, helping you understand the real value of an investment after government deductions."
             }
         ]
     },
     {
-        category: "Budgeting & Features",
-        icon: Wallet,
+        title: "The Welmora Engine",
         items: [
             {
-                question: "Can I connect multiple bank accounts?",
-                answer: "Yes, Welmora supports connections to over 10,000 financial institutions globally. You can aggregate all your checking, savings, investment, and credit card accounts in one dashboard."
+                question: "How does a SIP Solver assist me?",
+                answer: "A SIP (Systematic Investment Plan) Solver calculates the future value of your regular investments. More importantly, it helps you visualize the impact of 'Step-Up' contributions—showing how increasing your investment by just 5-10% annually can nearly double your final corpus."
             },
             {
-                question: "Does it track cash expenses?",
-                answer: "Absolutely. You can manually enter cash transactions, and our smart categorization engine will learn from your habits to speed up future entries."
-            }
-        ]
-    },
-    {
-        category: "Subscription & Billing",
-        icon: Lock,
-        items: [
-            {
-                question: "Is there a free trial?",
-                answer: "We offer a 14-day full-access free trial for our Premium plan. No credit card is required to start exploring the features."
+                question: "What is the purpose of the SWP Solver?",
+                answer: "The SWP (Systematic Withdrawal Plan) Solver is designed for the retirement or income phase. It helps you calculate a safe, sustainable monthly withdrawal amount that keeps your corpus intact for as long as possible, protecting you from outliving your savings."
             },
             {
-                question: "How do I cancel?",
-                answer: "You can cancel your subscription at any time directly from your account settings. There are no cancellation fees, and you'll retain access until the end of your billing period."
+                question: "Is my financial data secure?",
+                answer: "Security is our foundation. We use bank-grade 256-bit encryption for all data transmission. We do not sell your personal financial data to third parties. Your sovereignty is paramount."
+            },
+            {
+                question: "Can I track my family's financial health?",
+                answer: "Welmora provides a unified 'Household View'. You can track separate portfolios for you and your spouse, or combine them for a holistic check on your family's financial health."
             }
         ]
     }
 ];
 
 export default function FAQPage() {
-    const [openItem, setOpenItem] = useState<string | null>(null);
+    // State tracks the currently open item: "categoryIndex-itemIndex" string or null
+    const [openKey, setOpenKey] = useState<string | null>(null);
 
-    const toggleItem = (id: string) => {
-        setOpenItem(openItem === id ? null : id);
+    const toggleFAQ = (key: string) => {
+        setOpenKey(openKey === key ? null : key);
     };
 
     return (
-        <section className="min-h-screen py-24 px-6 bg-white pt-32">
+        <main className="pt-32 pb-24 px-6 w-full bg-white min-h-screen">
             <div className="max-w-4xl mx-auto">
-
                 {/* Header */}
-                <div className="text-center mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-trust-teal tracking-tight mb-6">
+                <div className="text-center mb-16 animate-in fade-in zoom-in duration-700">
+                    <h1
+                        className="text-4xl md:text-5xl font-bold text-[#052e16] mb-6 tracking-tight"
+                        style={{ scrollMarginTop: '100px' }}
+                    >
                         Frequently Asked Questions
                     </h1>
-                    <p className="text-xl text-gray-600 max-w-2xl mx-auto font-light leading-relaxed">
-                        Everything you need to know about using Welmora to secure your financial future.
+                    <p className="text-xl text-gray-600 font-light max-w-2xl mx-auto leading-relaxed">
+                        Deep dives into the engineering logic of financial sovereignty.
                     </p>
                 </div>
 
-                {/* FAQ Grid */}
-                <div className="grid grid-cols-1 gap-12">
-                    {faqs.map((section, sectionIndex) => (
-                        <div key={sectionIndex} className="animate-in fade-in slide-in-from-bottom-8 duration-700" style={{ animationDelay: `${sectionIndex * 150}ms`, animationFillMode: 'both' }}>
-                            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-                                <div className="w-10 h-10 rounded-full bg-growth-green/10 flex items-center justify-center">
-                                    <section.icon className="w-5 h-5 text-growth-green" />
-                                </div>
-                                <h2 className="text-2xl font-bold text-trust-teal">{section.category}</h2>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-4">
-                                {section.items.map((item, itemIndex) => {
-                                    const id = `${sectionIndex}-${itemIndex}`;
-                                    const isOpen = openItem === id;
+                {/* FAQ Categories */}
+                <div className="space-y-12">
+                    {faqCategories.map((category, catIdx) => (
+                        <div key={catIdx}>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-6 pl-2 border-l-4 border-growth-green">
+                                {category.title}
+                            </h2>
+                            <div className="space-y-4">
+                                {category.items.map((faq, itemIdx) => {
+                                    const key = `${catIdx}-${itemIdx}`;
+                                    const isOpen = openKey === key;
 
                                     return (
                                         <div
-                                            key={itemIndex}
-                                            className={`border rounded-xl transition-all duration-300 overflow-hidden ${isOpen ? 'border-growth-green/30 bg-growth-green/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                                            key={itemIdx}
+                                            className={`rounded-2xl overflow-hidden bg-white/40 backdrop-blur-xl transition-all duration-300 ${isOpen
+                                                ? 'border border-[#052e16] shadow-sm shadow-[#052e16]/5'
+                                                : 'border border-slate-200 hover:border-growth-green/30'
+                                                }`}
                                         >
                                             <button
-                                                onClick={() => toggleItem(id)}
-                                                className="w-full text-left px-6 py-4 flex items-center justify-between focus:outline-none"
+                                                className="w-full px-8 py-6 flex items-start sm:items-center justify-between text-left focus:outline-none bg-white/50 hover:bg-white/80 transition-colors gap-4"
+                                                onClick={() => toggleFAQ(key)}
                                             >
-                                                <span className={`font-semibold text-lg ${isOpen ? 'text-trust-teal' : 'text-gray-700'}`}>
-                                                    {item.question}
+                                                <span className={`font-semibold text-lg transition-colors duration-300 ${isOpen ? 'text-[#052e16]' : 'text-trust-teal'}`}>
+                                                    {faq.question}
                                                 </span>
                                                 {isOpen ? (
-                                                    <ChevronUp className="w-5 h-5 text-growth-green flex-shrink-0" />
+                                                    <ChevronUp className="w-5 h-5 text-[#052e16] flex-shrink-0 mt-1 sm:mt-0" strokeWidth={2} />
                                                 ) : (
-                                                    <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                                                    <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0 mt-1 sm:mt-0" strokeWidth={2} />
                                                 )}
                                             </button>
 
                                             <div
-                                                className={`px-6 transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 pb-6 opacity-100' : 'max-h-0 opacity-0'}`}
+                                                className={`px-8 transition-all duration-300 ease-in-out overflow-hidden bg-white/30 ${isOpen ? 'max-h-96 pb-8 opacity-100' : 'max-h-0 opacity-0'
+                                                    }`}
                                             >
-                                                <p className="text-gray-600 leading-relaxed">
-                                                    {item.answer}
+                                                <p className="text-gray-700 text-base leading-relaxed border-t border-gray-100 pt-4 font-normal">
+                                                    {faq.answer}
                                                 </p>
                                             </div>
                                         </div>
@@ -121,18 +124,19 @@ export default function FAQPage() {
                     ))}
                 </div>
 
-                {/* Contact CTA */}
-                <div className="mt-20 text-center p-12 bg-gray-50 rounded-2xl border border-gray-100">
-                    <h3 className="text-2xl font-bold text-trust-teal mb-4">Still have questions?</h3>
-                    <p className="text-gray-600 mb-8">Can't find the answer you're looking for? Our support team is here to help.</p>
-                    <Link href="/#support">
-                        <span className="inline-block bg-growth-green text-white font-semibold py-3 px-8 rounded-full shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
-                            Contact Support
-                        </span>
+                {/* Final Support CTA */}
+                <div className="mt-24 text-center">
+                    <p className="text-gray-500 mb-6 font-medium">Still have questions?</p>
+                    <Link
+                        href="/#support"
+                        className="inline-flex items-center gap-2 text-lg font-bold text-[#052e16] border-[1.5px] border-[#052e16] rounded-full px-8 py-4 hover:bg-[#052e16] hover:text-white transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-[#052e16]/20 group"
+                    >
+                        <MessageSquare size={20} className="group-hover:animate-bounce" />
+                        <span className="md:hidden">Contact Us</span>
+                        <span className="hidden md:inline">Contact Support & Engineering</span>
                     </Link>
                 </div>
-
             </div>
-        </section>
+        </main>
     );
 }

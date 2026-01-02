@@ -1,236 +1,286 @@
+
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
-    AreaChart, Area, XAxis, YAxis, CartesianGrid
+    AreaChart, Area
 } from 'recharts';
 import { useIndianCurrency } from '@/hooks/useIndianCurrency';
+import { ChevronDown, ArrowRightLeft } from 'lucide-react';
+import { solve, calculateEMI, calculateSIPSimulation, calculateSWPSimulation } from '@/utils/financialMath';
+import { InputRow, TooltipLabel, CalculatorCard } from '@/components/calculator-ui';
 import CalculatorInput from '@/components/CalculatorInput';
-import { Info, HelpCircle } from 'lucide-react';
 
 const SIP_COLORS = ['#0B2C2C', '#4BB100', '#10B981']; // Trust Teal, Growth Green
 const EMI_COLORS = ['#0B2C2C', '#f87171', '#ef4444']; // Trust Teal, Soft Red (Interest)
 
-interface CalculatorCardProps {
-    title: string;
-    children: React.ReactNode;
-}
-
-const CalculatorCard: React.FC<CalculatorCardProps> = ({ title, children }) => {
-    return (
-        <div className="bg-white/10 backdrop-blur-md border border-trust-teal/20 rounded-2xl p-6 shadow-xl flex flex-col gap-6 h-full">
-            <h2 className="text-2xl font-bold text-trust-teal">{title}</h2>
-            {children}
-        </div>
-    );
-};
-
-// --- Helper Components ---
-const TooltipLabel = ({ label, tooltip }: { label: string, tooltip: string }) => (
-    <div className="flex items-center gap-1 mb-2">
-        <label className="text-sm font-medium text-trust-teal">{label}</label>
-        <div className="group relative">
-            <HelpCircle size={14} className="text-gray-400 cursor-help" />
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-gray-800 text-white text-xs p-2 rounded w-48 hidden group-hover:block z-10 pointer-events-none shadow-lg">
-                {tooltip}
-                <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-800"></div>
-            </div>
-        </div>
-    </div>
-);
-
-// --- SIP Calculator (Advanced) ---
-const SIPCalculator = () => {
+// --- EMI Solver ---
+const EMICalculator = () => {
     const { formatCurrency } = useIndianCurrency();
-    const [goal, setGoal] = useState<'maturity' | 'target'>('maturity');
+    const [target, setTarget] = useState<'emi' | 'principal' | 'rate' | 'tenure'>('emi');
 
-    // Params
-    const [lumpsum, setLumpsum] = useState(0);
-    const [monthlySIP, setMonthlySIP] = useState(5000);
-    const [rate, setRate] = useState(12);
-    const [timePeriod, setTimePeriod] = useState(10); // Years
-    const [frequency, setFrequency] = useState<'Monthly' | 'Quarterly' | 'Semi-Annually' | 'Annually'>('Monthly');
-
-    // Step-Up
-    const [stepUpEnabled, setStepUpEnabled] = useState(false);
-    const [stepUpType, setStepUpType] = useState<'amount' | 'percentage'>('percentage');
-    const [stepUpValue, setStepUpValue] = useState(10); // 10% or 1000 Rs
-
-    // Results
-    const [result, setResult] = useState({ invested: 0, returns: 0, total: 0 });
-    const [chartData, setChartData] = useState<any[]>([]);
+    const [principal, setPrincipal] = useState(5000000);
+    const [rate, setRate] = useState(8.5);
+    const [tenure, setTenure] = useState(20);
+    const [emi, setEmi] = useState(21696);
 
     useEffect(() => {
-        // Simulation Engine
-        let currentSIP = monthlySIP;
-        let totalInvested = lumpsum;
-        let currentBalance = lumpsum;
-        let monthsElapsed = 0;
+        setPrincipal(5000000);
+        setRate(8.5);
+        setTenure(20);
+    }, []);
 
-        const r_monthly = rate / 100 / 12;
-        const totalMonths = timePeriod * 12;
+    const [chartData, setChartData] = useState<any[]>([]);
+    const [pieData, setPieData] = useState<any[]>([]);
+    const [displayResult, setDisplayResult] = useState<{ label: string, value: number, subParams: any }>({ label: '', value: 0, subParams: {} });
 
-        // Frequency mapping (months per installment)
-        const freqMap = { 'Monthly': 1, 'Quarterly': 3, 'Semi-Annually': 6, 'Annually': 12 };
-        const freqMonths = freqMap[frequency];
+    useEffect(() => {
+        let calculatedP = principal;
+        let calculatedR = rate;
+        let calculatedT = tenure;
+        let calculatedE = emi;
 
-        const dataPoints = [];
+        if (target === 'emi') {
+            calculatedE = calculateEMI(principal, rate, tenure);
+        } else if (target === 'principal') {
+            const rm = rate / 12 / 100;
+            const nm = tenure * 12;
+            const factor = rm * (Math.pow(1 + rm, nm) / (Math.pow(1 + rm, nm) - 1));
+            calculatedP = emi / factor;
+        } else if (target === 'rate') {
+            calculatedR = solve(emi, (rGuess) => calculateEMI(principal, rGuess, tenure), 0.1, 50);
+        } else if (target === 'tenure') {
+            calculatedT = solve(emi, (tGuess) => calculateEMI(principal, rate, tGuess), 1, 50);
+        }
 
-        // Add initial point
-        dataPoints.push({ year: 0, invested: totalInvested, value: currentBalance });
+        const r_monthly = calculatedR / 12 / 100;
+        const n_months = calculatedT * 12;
+        let balance = calculatedP;
+        let totalInterest = 0;
+        const data = [];
 
-        for (let m = 1; m <= totalMonths; m++) {
-            // Apply Step-Up (Annually)
-            if (stepUpEnabled && m > 1 && (m - 1) % 12 === 0) {
-                if (stepUpType === 'percentage') {
-                    currentSIP = currentSIP * (1 + stepUpValue / 100);
-                } else {
-                    currentSIP = currentSIP + stepUpValue;
+        if (calculatedP > 0 && n_months > 0 && n_months < 1200) {
+            for (let yr = 0; yr <= Math.ceil(calculatedT); yr++) {
+                data.push({ year: yr, balance: Math.max(0, Math.round(balance)), interestPaid: Math.round(totalInterest) });
+                for (let m = 0; m < 12; m++) {
+                    if (balance <= 0) break;
+                    const int = balance * r_monthly;
+                    const prin = calculatedE - int;
+                    balance -= prin;
+                    totalInterest += int;
                 }
-            }
-
-            // Apply Investment according to Frequency
-            if ((m - 1) % freqMonths === 0) {
-                // For non-monthly frequency, we assume the SIP amount is the *installment* amount?
-                // Usually SIP implies "Monthly", but if frequency is Quarterly, is "5000" paid every quarter? Yes.
-                totalInvested += currentSIP;
-                currentBalance += currentSIP;
-            }
-
-            // Apply Monthly Growth
-            currentBalance = currentBalance * (1 + r_monthly);
-
-            // Record Annual Data
-            if (m % 12 === 0) {
-                dataPoints.push({
-                    year: m / 12,
-                    invested: Math.round(totalInvested),
-                    value: Math.round(currentBalance)
-                });
             }
         }
 
-        setResult({
-            invested: Math.round(totalInvested),
-            returns: Math.round(currentBalance - totalInvested),
-            total: Math.round(currentBalance)
-        });
-        setChartData(dataPoints);
+        setChartData(data);
+        const totalPayment = calculatedE * n_months;
+        setPieData([
+            { name: 'Principal', value: Math.round(calculatedP) },
+            { name: 'Interest', value: Math.round(totalInterest) },
+        ]);
 
-    }, [lumpsum, monthlySIP, rate, timePeriod, frequency, stepUpEnabled, stepUpType, stepUpValue]);
+        let label = '';
+        let val = 0;
+        switch (target) {
+            case 'emi': label = 'Monthly EMI'; val = calculatedE; break;
+            case 'principal': label = 'Eligible Loan'; val = calculatedP; break;
+            case 'rate': label = 'Max Interest Rate'; val = calculatedR; break;
+            case 'tenure': label = 'Loan Tenure'; val = calculatedT; break;
+        }
+        setDisplayResult({ label, value: val, subParams: { totalInterest, totalPayment } });
 
-    const pieData = [
-        { name: 'Invested', value: result.invested },
-        { name: 'Returns', value: result.returns },
-    ];
+    }, [target, principal, rate, tenure, emi]);
 
     return (
         <div className="flex flex-col gap-6 h-full justify-between">
             <div className="flex flex-col gap-4">
-                {/* Inputs */}
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                    <button
-                        onClick={() => setGoal('maturity')}
-                        className={`text-sm font-bold py-2 rounded-lg border transition-all ${goal === 'maturity' ? 'bg-growth-green text-white border-growth-green' : 'bg-transparent text-gray-500 border-gray-200'}`}
-                    >
-                        Maturity Value
-                    </button>
-                    <button
-                        onClick={() => setGoal('target')}
-                        className={`text-sm font-bold py-2 rounded-lg border transition-all ${goal === 'target' ? 'bg-growth-green text-white border-growth-green' : 'bg-transparent text-gray-500 border-gray-200'}`}
-                    >
-                        Target SIP
-                    </button>
+                <div className="relative">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">I want to calculate</label>
+                    <select value={target} onChange={(e) => setTarget(e.target.value as any)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-trust-teal focus:ring-2 focus:ring-trust-teal outline-none appearance-none">
+                        <option value="emi">Monthly EMI</option>
+                        <option value="principal">Loan Amount</option>
+                        <option value="rate">Interest Rate</option>
+                        <option value="tenure">Loan Tenure</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-8 text-gray-400 pointer-events-none" size={16} />
                 </div>
 
-                <div className="space-y-4">
-                    {/* Lumpsum */}
-                    <div>
-                        <TooltipLabel label="Lumpsum Deposit" tooltip="One-time initial investment." />
-                        <div className="flex items-center gap-2">
-                            <span className="text-gray-400">₹</span>
-                            <CalculatorInput value={lumpsum} onChange={setLumpsum} className="w-full" />
-                        </div>
-                    </div>
+                <div className="space-y-6">
+                    {target !== 'principal' && <InputRow label="Loan Amount" val={principal} setVal={setPrincipal} min={100000} max={10000000} step={50000} tooltip="The total principal amount borrowed from the lender." />}
+                    {target !== 'rate' && <InputRow label="Interest Rate" val={rate} setVal={setRate} min={1} max={20} step={0.1} unit="%" decimalScale={2} tooltip="The annual percentage rate (APR) charged on the borrowed principal." />}
+                    {target !== 'tenure' && <InputRow label="Tenure (Years)" val={tenure} setVal={setTenure} min={1} max={30} step={1} unit="Yr" tooltip="The duration over which the loan is repaid in monthly installments." />}
+                    {target !== 'emi' && <InputRow label="Target EMI" val={emi} setVal={setEmi} min={1000} max={200000} step={500} tooltip="The fixed monthly amount you can afford to pay towards loan repayment." />}
+                </div>
+            </div>
 
-                    {/* SIP Amount */}
-                    <div>
-                        <TooltipLabel label="Regular Installment" tooltip="Amount invested periodically." />
-                        <div className="flex items-center gap-2">
-                            <span className="text-gray-400">₹</span>
-                            <CalculatorInput value={monthlySIP} onChange={setMonthlySIP} className="w-full" />
-                        </div>
-                        <input type="range" min="500" max="100000" step="500" value={monthlySIP} onChange={e => setMonthlySIP(Number(e.target.value))} className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-growth-green mt-2" />
-                    </div>
+            <div className="space-y-4">
+                <div className="h-32 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={2} dataKey="value">
+                                {pieData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={EMI_COLORS[index % EMI_COLORS.length]} />
+                                ))}
+                            </Pie>
+                            <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : ''} />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+                {/* Fixed Height to prevent layout shift */}
+                <div className="h-24 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData}>
+                            <defs>
+                                <linearGradient id="colorInterest" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#f87171" stopOpacity={0.8} />
+                                    <stop offset="95%" stopColor="#f87171" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : ''} />
+                            <Area type="monotone" dataKey="interestPaid" stroke="#f87171" fillOpacity={1} fill="url(#colorInterest)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
 
-                    {/* Frequency */}
-                    <div>
-                        <TooltipLabel label="Frequency" tooltip="How often you invest." />
-                        <select
-                            value={frequency}
-                            onChange={(e) => setFrequency(e.target.value as any)}
-                            className="w-full p-2 border rounded bg-white/50 font-medium text-trust-teal text-sm focus:ring-1 focus:ring-growth-green"
-                        >
-                            <option>Monthly</option>
-                            <option>Quarterly</option>
-                            <option>Semi-Annually</option>
-                            <option>Annually</option>
-                        </select>
+                <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-100 rounded-xl p-4">
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 text-center">{displayResult.label}</div>
+                    <div className="text-3xl font-bold text-trust-teal text-center mb-2 font-mono tracking-tighter" suppressHydrationWarning>
+                        {target === 'rate' || target === 'tenure' ? displayResult.value.toFixed(2) : formatCurrency(displayResult.value)}
+                        {target === 'rate' && <span className="text-lg text-gray-400 font-sans">%</span>}
+                        {target === 'tenure' && <span className="text-lg text-gray-400 font-sans"> Yr</span>}
                     </div>
+                    <div className="flex justify-between text-xs text-gray-500 border-t pt-2 mt-2">
+                        <span>Total Pay: {formatCurrency(displayResult.subParams.totalPayment)}</span>
+                        <span className="text-red-500 font-medium">Int: {formatCurrency(displayResult.subParams.totalInterest)}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
-                    {/* Rate & Tenure */}
+// --- SIP Solver ---
+const SIPCalculator = () => {
+    const { formatCurrency } = useIndianCurrency();
+    const [target, setTarget] = useState<'maturity' | 'sip' | 'lumpsum' | 'rate' | 'tenure'>('maturity');
+
+    const [maturity, setMaturity] = useState(10000000); // 1 Cr
+    const [monthlySIP, setMonthlySIP] = useState(15000);
+    const [lumpsum, setLumpsum] = useState(0);
+    const [rate, setRate] = useState(15);
+    const [tenure, setTenure] = useState(15);
+    const [stepUp, setStepUp] = useState({ enabled: true, type: 'percentage', value: 15, direction: 'increase', frequency: 'yearly' });
+
+    useEffect(() => {
+        setMonthlySIP(15000);
+        setRate(15);
+        setTenure(15);
+        setStepUp({ enabled: true, type: 'percentage', value: 15, direction: 'increase', frequency: 'yearly' });
+        setLumpsum(0);
+        setMaturity(10000000);
+    }, []);
+
+    const [chartData, setChartData] = useState<any[]>([]);
+    const [pieData, setPieData] = useState<any[]>([]);
+    const [calculatedVal, setCalculatedVal] = useState(0);
+
+    useEffect(() => {
+        let calcRes = 0;
+        let simData = { maturity: 0, invested: 0, history: [] as any[] };
+
+        if (target === 'maturity') {
+            simData = calculateSIPSimulation(monthlySIP, lumpsum, rate, tenure, stepUp);
+            calcRes = simData.maturity;
+        } else if (target === 'sip') {
+            calcRes = solve(maturity, (s) => calculateSIPSimulation(s, lumpsum, rate, tenure, stepUp).maturity, 0, maturity);
+            simData = calculateSIPSimulation(calcRes, lumpsum, rate, tenure, stepUp);
+        } else if (target === 'lumpsum') {
+            calcRes = solve(maturity, (l) => calculateSIPSimulation(monthlySIP, l, rate, tenure, stepUp).maturity, 0, maturity);
+            simData = calculateSIPSimulation(monthlySIP, calcRes, rate, tenure, stepUp);
+        } else if (target === 'rate') {
+            calcRes = solve(maturity, (r) => calculateSIPSimulation(monthlySIP, lumpsum, r, tenure, stepUp).maturity, 0, 100);
+            simData = calculateSIPSimulation(monthlySIP, lumpsum, calcRes, tenure, stepUp);
+        } else if (target === 'tenure') {
+            calcRes = solve(maturity, (t) => calculateSIPSimulation(monthlySIP, lumpsum, rate, t, stepUp).maturity, 0, 100);
+            simData = calculateSIPSimulation(monthlySIP, lumpsum, rate, calcRes, stepUp);
+        }
+
+        setChartData(simData.history);
+        setCalculatedVal(calcRes);
+        setPieData([
+            { name: 'Invested', value: Math.round(simData.invested) },
+            { name: 'Returns', value: Math.round(simData.maturity - simData.invested) },
+        ]);
+
+    }, [target, maturity, monthlySIP, lumpsum, rate, tenure, stepUp]);
+
+    return (
+        <div className="flex flex-col gap-6 h-full justify-between">
+            <div className="flex flex-col gap-4">
+                <div className="relative">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">I want to calculate</label>
+                    <select value={target} onChange={(e) => setTarget(e.target.value as any)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-trust-teal focus:ring-2 focus:ring-growth-green outline-none appearance-none">
+                        <option value="maturity">Final Corpus Amount</option>
+                        <option value="sip">Required SIP Amount</option>
+                        <option value="lumpsum">Required Lumpsum</option>
+                        <option value="rate">Required Return (%)</option>
+                        <option value="tenure">Required Time (Years)</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-8 text-gray-400 pointer-events-none" size={16} />
+                </div>
+
+                <div className="space-y-6">
+                    {target !== 'maturity' && <InputRow label="Target Corpus" val={maturity} setVal={setMaturity} min={500000} max={100000000} step={100000} tooltip="The total future value of your investment, including principal and accumulated compound interest." />}
+                    {target !== 'sip' && <InputRow label="Monthly SIP" val={monthlySIP} setVal={setMonthlySIP} min={500} max={100000} step={500} tooltip="The fixed amount invested at regular intervals to build wealth via Rupee Cost Averaging." />}
+                    {target !== 'lumpsum' && <InputRow label="Lumpsum Deposit" val={lumpsum} setVal={setLumpsum} min={0} max={10000000} step={50000} tooltip="A one-time initial investment that kickstarts compound growth from Day 1." />}
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <TooltipLabel label="Return (%)" tooltip="Expected annual rate of return." />
-                            <CalculatorInput value={rate} onChange={setRate} className="w-full" />
-                        </div>
-                        <div>
-                            <TooltipLabel label="Years" tooltip="Investment duration." />
-                            <CalculatorInput value={timePeriod} onChange={setTimePeriod} className="w-full" />
-                        </div>
+                        {target !== 'rate' && <div><InputRow label="Return" val={rate} setVal={setRate} min={1} max={30} step={0.1} unit="%" decimalScale={2} tooltip="Expected Compound Annual Growth Rate (CAGR) based on asset class performance." /></div>}
+                        {target !== 'tenure' && <div><InputRow label="Years" val={tenure} setVal={setTenure} min={1} max={50} step={1} unit="Yr" tooltip="The investment horizon over which compounding effects accelerate." /></div>}
                     </div>
 
-                    {/* Step Up Toggle */}
-                    <div className="border-t border-gray-200 pt-2">
-                        <div className="flex justify-between items-center mb-2">
-                            <label className="text-sm font-medium text-trust-teal flex items-center gap-1">
-                                Annual Step-Up
-                                <input type="checkbox" checked={stepUpEnabled} onChange={(e) => setStepUpEnabled(e.target.checked)} className="accent-growth-green" />
-                            </label>
+                    <div className="pt-2 border-t border-gray-100 flex flex-col gap-2 max-w-full">
+                        <div className="flex items-center gap-1">
+                            <TooltipLabel label="Step Up" tooltip="Annual percentage increase in your investment to beat inflation and accelerate wealth creation." />
+                            <input type="checkbox" checked={stepUp.enabled} onChange={e => setStepUp({ ...stepUp, enabled: e.target.checked })} className="accent-growth-green ml-1" />
                         </div>
-                        {stepUpEnabled && (
-                            <div className="flex gap-2">
-                                <select
-                                    value={stepUpType}
-                                    onChange={(e) => setStepUpType(e.target.value as any)}
-                                    className="p-1 text-sm border rounded bg-white/50"
-                                >
-                                    <option value="percentage">%</option>
-                                    <option value="amount">₹</option>
+                        {stepUp.enabled && (
+                            <div className="flex flex-wrap gap-2 items-center bg-white/50 p-2 rounded-lg border border-gray-100 text-xs text-gray-600 max-w-full overflow-hidden">
+                                <select value={stepUp.direction} onChange={e => setStepUp({ ...stepUp, direction: e.target.value })} className="bg-transparent font-bold text-trust-teal outline-none flex-shrink-0">
+                                    <option value="increase">Increase</option>
+                                    <option value="decrease">Decrease</option>
                                 </select>
-                                <CalculatorInput value={stepUpValue} onChange={setStepUpValue} className="w-full" />
+                                <span className="flex-shrink-0">by</span>
+                                <CalculatorInput value={stepUp.value} onChange={v => setStepUp({ ...stepUp, value: v })} className="w-16 border-b text-center font-bold flex-shrink-0" />
+                                <div className="flex bg-gray-200 rounded p-0.5 flex-shrink-0">
+                                    <button onClick={() => setStepUp({ ...stepUp, type: 'percentage' })} className={`px-2 py-0.5 rounded ${stepUp.type === 'percentage' ? 'bg-white shadow text-trust-teal' : 'text-gray-400'}`}>%</button>
+                                    <button onClick={() => setStepUp({ ...stepUp, type: 'amount' })} className={`px-2 py-0.5 rounded ${stepUp.type === 'amount' ? 'bg-white shadow text-trust-teal' : 'text-gray-400'}`}>₹</button>
+                                </div>
+                                <select value={stepUp.frequency} onChange={e => setStepUp({ ...stepUp, frequency: e.target.value })} className="bg-transparent font-bold text-trust-teal outline-none ml-1 flex-1 min-w-[80px]">
+                                    <option value="yearly">Yearly</option>
+                                    <option value="half-yearly">Half-Yearly</option>
+                                </select>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* Visuals */}
-            <div className="flex flex-col gap-4">
-                <div className="h-32 w-full">
+            <div className="space-y-4">
+                <div className="h-28 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
+                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={2} dataKey="value">
                                 {pieData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={SIP_COLORS[index % SIP_COLORS.length]} />
                                 ))}
                             </Pie>
-                            <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                            <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : ''} />
                         </PieChart>
                     </ResponsiveContainer>
                 </div>
-                <div className="h-24 w-full">
+                <div className="h-20 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={chartData}>
                             <defs>
@@ -239,331 +289,176 @@ const SIPCalculator = () => {
                                     <stop offset="95%" stopColor="#4BB100" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                            <Area type="monotone" dataKey="value" stroke="#4BB100" fillOpacity={1} fill="url(#colorSIP)" />
+                            <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : ''} />
+                            <Area type="monotone" dataKey="value" stroke="#4BB100" fillOpacity={1} fill="url(#colorSIP)" strokeWidth={2} />
+                            <Area type="monotone" dataKey="benchmark" stroke="#94a3b8" fillOpacity={0} strokeDasharray="3 3" strokeWidth={1} name="FD (6%)" />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
-
-                <div className="bg-white/40 rounded-xl p-4 text-center">
-                    <div className="text-sm text-gray-600">Total Value</div>
-                    <div className="text-2xl font-bold text-trust-teal">{formatCurrency(result.total)}</div>
-                    <div className="flex justify-between text-xs text-gray-500 mt-2 px-4">
-                        <span>Inv: {formatCurrency(result.invested)}</span>
-                        <span className="text-growth-green">Ret: {formatCurrency(result.returns)}</span>
+                <div className="bg-gradient-to-br from-green-50 to-white border border-green-100 rounded-xl p-4 text-center">
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                        {target === 'maturity' ? 'Final Corpus' : target === 'sip' ? 'Required SIP' : target === 'lumpsum' ? 'Required Lumpsum' : target === 'rate' ? 'Required CAGR' : 'Years Needed'}
+                    </div>
+                    <div className="text-2xl font-bold text-growth-green font-mono tracking-tighter">
+                        {target === 'rate' || target === 'tenure' ? calculatedVal.toFixed(1) : formatCurrency(calculatedVal)}
+                        <span className="text-sm text-gray-400 ml-1 font-sans">{target === 'rate' ? '%' : target === 'tenure' ? 'Yrs' : ''}</span>
                     </div>
                 </div>
             </div>
+            {/* Removed Legacy 10% Button */}
         </div>
+
     );
 };
 
-// --- EMI Calculator (Refined) ---
-const EMICalculator = () => {
-    const { formatCurrency } = useIndianCurrency();
-    const [goal, setGoal] = useState<'emi' | 'eligibility'>('emi');
-
-    const [loanAmount, setLoanAmount] = useState(2500000);
-    const [rate, setRate] = useState(8.5);
-    const [tenure, setTenure] = useState(20); // Years
-
-    const [result, setResult] = useState({ emi: 0, totalInterest: 0, totalPayment: 0, maxLoan: 0 });
-    const [chartData, setChartData] = useState<any[]>([]);
-
-    useEffect(() => {
-        const r = rate / 12 / 100;
-        const n = tenure * 12;
-
-        if (goal === 'emi') {
-            const emi = loanAmount * r * (Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1));
-            const totalPayment = emi * n;
-            setResult({
-                emi: Math.round(emi),
-                totalInterest: Math.round(totalPayment - loanAmount),
-                totalPayment: Math.round(totalPayment),
-                maxLoan: 0
-            });
-
-            // Chart Data
-            let balance = loanAmount;
-            let interestAcc = 0;
-            const data = [];
-            for (let yr = 0; yr <= tenure; yr++) {
-                data.push({ year: yr, balance: Math.round(balance), interestValues: Math.round(interestAcc) });
-                for (let m = 0; m < 12; m++) {
-                    if (balance <= 0) break;
-                    const interest = balance * r;
-                    const principal = emi - interest;
-                    balance -= principal;
-                    interestAcc += interest;
-                }
-            }
-            setChartData(data);
-
-        } else {
-            // Eligibility: input "loanAmount" acts as "Affordable EMI" in this mode for simplicity? 
-            // Better to genericize state names, but for now let's reuse 'loanAmount' state as valid input variable 
-            // Or rename it in UI context.
-            // Let's assume 'loanAmount' state holds the EMI input when mode is 'eligibility'.
-            const affordableEMI = loanAmount; // Reusing state variable
-            const maxLoan = affordableEMI / (r * (Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1)));
-            const totalPayment = affordableEMI * n;
-            setResult({
-                emi: affordableEMI,
-                totalInterest: Math.round(totalPayment - maxLoan),
-                totalPayment: Math.round(totalPayment),
-                maxLoan: Math.round(maxLoan)
-            });
-            setChartData([]); // Simplified for eligibility
-        }
-    }, [loanAmount, rate, tenure, goal]);
-
-    const pieData = [
-        { name: 'Principal', value: goal === 'emi' ? loanAmount : result.maxLoan },
-        { name: 'Interest', value: result.totalInterest },
-    ];
-
-    return (
-        <div className="flex flex-col gap-6 h-full justify-between">
-            <div className="flex flex-col gap-4">
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                    <button onClick={() => setGoal('emi')} className={`text-sm font-bold py-2 rounded-lg border transition-all ${goal === 'emi' ? 'bg-trust-teal text-white border-trust-teal' : 'bg-transparent text-gray-500 border-gray-200'}`}>Monthly EMI</button>
-                    <button onClick={() => setGoal('eligibility')} className={`text-sm font-bold py-2 rounded-lg border transition-all ${goal === 'eligibility' ? 'bg-trust-teal text-white border-trust-teal' : 'bg-transparent text-gray-500 border-gray-200'}`}>Eligibility</button>
-                </div>
-
-                <div className="space-y-4">
-                    <div>
-                        <TooltipLabel label={goal === 'emi' ? "Loan Amount" : "Affordable Monthly EMI"} tooltip={goal === 'emi' ? "Total principal amount." : "How much can you pay monthly?"} />
-                        <div className="flex items-center gap-2">
-                            <span className="text-gray-400">₹</span>
-                            <CalculatorInput value={loanAmount} onChange={setLoanAmount} className="w-full" />
-                        </div>
-                        <input type="range" min="10000" max={goal === 'emi' ? 10000000 : 200000} step="1000" value={loanAmount} onChange={e => setLoanAmount(Number(e.target.value))} className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-trust-teal mt-2" />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <TooltipLabel label="Rate (%)" tooltip="Annual Interest Rate." />
-                            <CalculatorInput value={rate} onChange={setRate} className="w-full" />
-                        </div>
-                        <div>
-                            <TooltipLabel label="Tenure (Yr)" tooltip="Loan duration." />
-                            <CalculatorInput value={tenure} onChange={setTenure} className="w-full" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Visuals */}
-            <div className="flex flex-col gap-4">
-                <div className="h-32 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
-                                {pieData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={EMI_COLORS[index % EMI_COLORS.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </div>
-                {goal === 'emi' && (
-                    <div className="h-24 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={chartData}>
-                                <defs>
-                                    <linearGradient id="colorEMI" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#f87171" stopOpacity={0.8} />
-                                        <stop offset="95%" stopColor="#f87171" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                                <Area type="monotone" dataKey="brand" dataKey="interestValues" stroke="#f87171" fillOpacity={1} fill="url(#colorEMI)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                )}
-
-                <div className="bg-white/40 rounded-xl p-4 text-center">
-                    <div className="text-sm text-gray-600">{goal === 'emi' ? 'Monthly EMI' : 'Eligible Loan'}</div>
-                    <div className="text-2xl font-bold text-trust-teal">
-                        {formatCurrency(goal === 'emi' ? result.emi : result.maxLoan)}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// --- SWP Calculator (Advanced) ---
+// --- SWP Solver ---
 const SWPCalculator = () => {
     const { formatCurrency } = useIndianCurrency();
+    const [target, setTarget] = useState<'withdrawal' | 'corpus' | 'rate' | 'tenure' | 'balance'>('balance');
 
-    // Params
-    const [corpus, setCorpus] = useState(5000000);
-    const [withdrawal, setWithdrawal] = useState(25000);
+    const [withdrawal, setWithdrawal] = useState(50000);
+    const [corpus, setCorpus] = useState(10000000);
     const [rate, setRate] = useState(8);
-    const [duration, setDuration] = useState(10);
-    const [frequency, setFrequency] = useState<'Monthly' | 'Quarterly' | 'Semi-Annually' | 'Annually'>('Monthly');
-
-    // Inflation
-    const [inflationEnabled, setInflationEnabled] = useState(false);
-    const [inflationRate, setInflationRate] = useState(6); // %
-
-    // Results
-    const [finalValue, setFinalValue] = useState(0);
-    const [totalWithdrawn, setTotalWithdrawn] = useState(0);
-    const [chartData, setChartData] = useState<any[]>([]);
+    const [tenure, setTenure] = useState(20);
+    const [stepUp, setStepUp] = useState({ enabled: true, type: 'percentage' as 'percentage' | 'amount', value: 6, direction: 'increase' as 'increase' | 'decrease', frequency: 'yearly' as 'yearly' | 'monthly' });
 
     useEffect(() => {
-        let currentBalance = corpus;
-        let currentWithdrawal = withdrawal;
-        let totalW = 0;
+        setCorpus(10000000);
+        setWithdrawal(50000);
+        setRate(8);
+        setTenure(20);
+        setStepUp({ enabled: true, type: 'percentage', value: 6, direction: 'increase', frequency: 'yearly' });
+    }, []);
 
-        const r_monthly = rate / 100 / 12;
-        const totalMonths = duration * 12;
-        const freqMap = { 'Monthly': 1, 'Quarterly': 3, 'Semi-Annually': 6, 'Annually': 12 };
-        const freqMonths = freqMap[frequency];
+    const [chartData, setChartData] = useState<any[]>([]);
+    const [pieData, setPieData] = useState<any[]>([]);
+    const [calculatedVal, setCalculatedVal] = useState(0);
 
-        const dataPoints = [];
-        dataPoints.push({ year: 0, balance: Math.round(currentBalance) });
+    useEffect(() => {
+        let res = 0;
+        let sim = { final: 0, totalW: 0, history: [] as any[] };
 
-        for (let m = 1; m <= totalMonths; m++) {
-            // Apply Annual Inflation to Withdrawal
-            if (inflationEnabled && m > 1 && (m - 1) % 12 === 0) {
-                currentWithdrawal = currentWithdrawal * (1 + inflationRate / 100);
-            }
-
-            // Apply Growth
-            currentBalance = currentBalance * (1 + r_monthly);
-
-            // Apply Withdrawal
-            if ((m - 1) % freqMonths === 0) {
-                currentBalance -= currentWithdrawal;
-                totalW += currentWithdrawal;
-            }
-
-            if (currentBalance < 0) currentBalance = 0;
-
-            if (m % 12 === 0) {
-                dataPoints.push({ year: m / 12, balance: Math.round(currentBalance) });
-            }
+        if (target === 'balance') {
+            sim = calculateSWPSimulation(corpus, withdrawal, rate, tenure, stepUp);
+            res = Math.max(0, sim.final);
+        } else if (target === 'withdrawal') {
+            res = solve(0, (w) => calculateSWPSimulation(corpus, w, rate, tenure, stepUp).final, 0, corpus);
+            sim = calculateSWPSimulation(corpus, res, rate, tenure, stepUp);
+        } else if (target === 'corpus') {
+            res = solve(0, (c) => calculateSWPSimulation(c, withdrawal, rate, tenure, stepUp).final, 0, withdrawal * 12 * tenure * 2);
+            sim = calculateSWPSimulation(res, withdrawal, rate, tenure, stepUp);
+        } else if (target === 'rate') {
+            res = solve(0, (r) => calculateSWPSimulation(corpus, withdrawal, r, tenure, stepUp).final, 0, 100);
+            sim = calculateSWPSimulation(corpus, withdrawal, res, tenure, stepUp);
+        } else if (target === 'tenure') {
+            res = solve(0, (t) => calculateSWPSimulation(corpus, withdrawal, rate, t, stepUp).final, 0, 100);
+            sim = calculateSWPSimulation(corpus, withdrawal, rate, res, stepUp);
         }
 
-        setFinalValue(Math.round(currentBalance));
-        setTotalWithdrawn(Math.round(totalW));
-        setChartData(dataPoints);
+        setCalculatedVal(res);
+        setChartData(sim.history);
+        setPieData([
+            { name: 'Remaining', value: Math.round(sim.final) },
+            { name: 'Withdrawn', value: Math.round(sim.totalW) },
+        ]);
 
-    }, [corpus, withdrawal, rate, duration, frequency, inflationEnabled, inflationRate]);
-
-    const pieData = [
-        { name: 'Final', value: finalValue },
-        { name: 'Withdrawn', value: totalWithdrawn },
-    ];
+    }, [target, withdrawal, corpus, rate, tenure, stepUp]);
 
     return (
         <div className="flex flex-col gap-6 h-full justify-between">
             <div className="flex flex-col gap-4">
-                <div className="text-center font-bold text-trust-teal border-b pb-2">Retirement Plan</div>
+                <div className="relative">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">I want to calculate</label>
+                    <select value={target} onChange={(e) => setTarget(e.target.value as any)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-trust-teal focus:ring-2 focus:ring-growth-green outline-none appearance-none">
+                        <option value="balance">Final Balance (Projected)</option>
+                        <option value="withdrawal">Sustainable Withdrawal (to 0)</option>
+                        <option value="corpus">Required Corpus</option>
+                        <option value="rate">Required Return</option>
+                        <option value="tenure">Sustainable Years</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-8 text-gray-400 pointer-events-none" size={16} />
+                </div>
 
-                <div className="space-y-4">
-                    <div>
-                        <TooltipLabel label="Total Corpus" tooltip="Your retirement savings." />
-                        <div className="flex items-center gap-2">
-                            <span className="text-gray-400">₹</span>
-                            <CalculatorInput value={corpus} onChange={setCorpus} className="w-full" />
-                        </div>
-                    </div>
-
-                    <div>
-                        <TooltipLabel label="Withdrawal" tooltip="Periodic income needed." />
-                        <div className="flex items-center gap-2">
-                            <span className="text-gray-400">₹</span>
-                            <CalculatorInput value={withdrawal} onChange={setWithdrawal} className="w-full" />
-                        </div>
-                        <input type="range" min="1000" max="100000" step="500" value={withdrawal} onChange={e => setWithdrawal(Number(e.target.value))} className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-growth-green mt-2" />
-                    </div>
-
-                    {/* Frequency */}
-                    <div>
-                        <TooltipLabel label="Frequency" tooltip="How often you withdraw." />
-                        <select
-                            value={frequency}
-                            onChange={(e) => setFrequency(e.target.value as any)}
-                            className="w-full p-2 border rounded bg-white/50 font-medium text-trust-teal text-sm focus:ring-1 focus:ring-growth-green"
-                        >
-                            <option>Monthly</option>
-                            <option>Quarterly</option>
-                            <option>Semi-Annually</option>
-                            <option>Annually</option>
-                        </select>
-                    </div>
-
+                <div className="space-y-6">
+                    {target !== 'corpus' && <InputRow label="Current Corpus" val={corpus} setVal={setCorpus} min={500000} max={50000000} step={100000} />}
+                    {target !== 'withdrawal' && <InputRow label="Monthly Withdrawal" val={withdrawal} setVal={setWithdrawal} min={5000} max={200000} step={1000} />}
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <TooltipLabel label="Rate (%)" tooltip="Expected annual return." />
-                            <CalculatorInput value={rate} onChange={setRate} className="w-full" />
-                        </div>
-                        <div>
-                            <TooltipLabel label="Duration" tooltip="Years to withdraw." />
-                            <CalculatorInput value={duration} onChange={setDuration} className="w-full" />
-                        </div>
+                        {target !== 'rate' && <div><InputRow label="Return" val={rate} setVal={setRate} min={1} max={20} step={0.1} unit="%" decimalScale={2} /></div>}
+                        {target !== 'tenure' && <div><InputRow label="Years" val={tenure} setVal={setTenure} min={1} max={50} step={1} unit="Yr" /></div>}
                     </div>
 
-                    {/* Inflation Toggle */}
-                    <div className="border-t border-gray-200 pt-2">
-                        <div className="flex justify-between items-center mb-2">
-                            <label className="text-sm font-medium text-trust-teal flex items-center gap-1">
-                                Adjust Inflation
-                                <input type="checkbox" checked={inflationEnabled} onChange={(e) => setInflationEnabled(e.target.checked)} className="accent-growth-green" />
-                            </label>
+                    <div className="pt-2 border-t border-gray-100 flex flex-col gap-2">
+                        <div className="flex items-center gap-1">
+                            <TooltipLabel label="Annual Adjustment" tooltip="The percentage or fixed amount by which you plan to increase/decrease your monthly withdrawal to account for inflation or lifestyle changes." />
+                            <input type="checkbox" checked={stepUp.enabled} onChange={e => setStepUp({ ...stepUp, enabled: e.target.checked })} className="accent-growth-green ml-1" />
                         </div>
-                        {inflationEnabled && (
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500">Rate:</span>
-                                <CalculatorInput value={inflationRate} onChange={setInflationRate} className="w-full" />
-                                <span className="text-xs text-gray-500">%</span>
+                        {stepUp.enabled && (
+                            <div className="flex gap-2 items-center bg-white/50 p-2 rounded-lg border border-gray-100 text-xs text-gray-600">
+                                <select value={stepUp.direction} onChange={e => setStepUp({ ...stepUp, direction: e.target.value as any })} className="bg-transparent font-bold text-trust-teal outline-none">
+                                    <option value="increase">Increase</option>
+                                    <option value="decrease">Decrease</option>
+                                </select>
+                                <span>by</span>
+                                <CalculatorInput value={stepUp.value} onChange={v => setStepUp({ ...stepUp, value: v })} className="w-16 border-b text-center font-bold" />
+                                <div className="flex bg-gray-200 rounded p-0.5">
+                                    <button onClick={() => setStepUp({ ...stepUp, type: 'percentage' })} className={`px-2 py-0.5 rounded ${stepUp.type === 'percentage' ? 'bg-white shadow text-trust-teal' : 'text-gray-400'}`}>%</button>
+                                    <button onClick={() => setStepUp({ ...stepUp, type: 'amount' })} className={`px-2 py-0.5 rounded ${stepUp.type === 'amount' ? 'bg-white shadow text-trust-teal' : 'text-gray-400'}`}>₹</button>
+                                </div>
+                                <select value={stepUp.frequency} onChange={e => setStepUp({ ...stepUp, frequency: e.target.value as any })} className="bg-transparent font-bold text-trust-teal outline-none ml-1">
+                                    <option value="yearly">Yearly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* Visuals */}
-            <div className="flex flex-col gap-4">
-                <div className="h-32 w-full">
+            <div className="space-y-4">
+                <div className="h-28 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
+                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={2} dataKey="value">
                                 {pieData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={SIP_COLORS[index % SIP_COLORS.length]} />
                                 ))}
                             </Pie>
-                            <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                            <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : ''} />
                         </PieChart>
                     </ResponsiveContainer>
                 </div>
-                <div className="h-24 w-full">
+                <div className="h-20 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={chartData}>
                             <defs>
                                 <linearGradient id="colorSWP" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#4BB100" stopOpacity={0.8} />
-                                    <stop offset="95%" stopColor="#4BB100" stopOpacity={0} />
+                                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1} />
+                                </linearGradient>
+                                <linearGradient id="gradientHealth" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#4BB100" />
+                                    <stop offset="100%" stopColor="#ef4444" />
                                 </linearGradient>
                             </defs>
-                            <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                            <Area type="monotone" dataKey="balance" stroke="#4BB100" fillOpacity={1} fill="url(#colorSWP)" />
+                            <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : ''} />
+                            <Area
+                                type="monotone"
+                                dataKey="balance"
+                                stroke={calculatedVal === 0 ? "#ef4444" : "#4BB100"}
+                                fillOpacity={1}
+                                fill={`url(#${calculatedVal === 0 ? 'gradientHealth' : 'colorSWP'})`}
+                                strokeWidth={2}
+                            />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
-
-                <div className="bg-white/40 rounded-xl p-4 text-center">
-                    <div className="text-sm text-gray-600">Final Value</div>
-                    <div className={`text-2xl font-bold ${finalValue > 0 ? 'text-growth-green' : 'text-red-500'}`}>{formatCurrency(finalValue)}</div>
-                    <div className="text-xs text-gray-500 mt-2">
-                        Total Withdrawn: {formatCurrency(totalWithdrawn)}
+                <div className="bg-gradient-to-br from-green-50 to-white border border-green-100 rounded-xl p-4 text-center">
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                        {target === 'withdrawal' ? 'Sustainable Monthly' : target === 'corpus' ? 'Required Corpus' : target === 'rate' ? 'Required Return' : target === 'balance' ? 'Projected Value' : 'Money Lasts For'}
+                    </div>
+                    <div className="text-2xl font-bold text-growth-green font-mono tracking-tighter" suppressHydrationWarning>
+                        {target === 'rate' || target === 'tenure' ? calculatedVal.toFixed(1) : formatCurrency(calculatedVal)}
+                        <span className="text-sm text-gray-400 ml-1 font-sans">{target === 'rate' ? '%' : target === 'tenure' ? 'Yrs' : ''}</span>
                     </div>
                 </div>
             </div>
@@ -573,27 +468,42 @@ const SWPCalculator = () => {
 
 export default function CalculatorsPage() {
     return (
-        <main className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white pt-24 pb-20 overflow-x-hidden">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-[90rem]"> {/* Wider container for 3 cols */}
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl md:text-5xl font-bold text-trust-teal mb-4 tracking-tight">Financial Simulator</h1>
-                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                        Advanced tools for wealth creations and debt management.
+        <div className="min-h-screen bg-white p-6 md:p-8 pt-24 font-sans text-slate-800" suppressHydrationWarning>
+            <div className="max-w-7xl mx-auto space-y-12">
+
+                <div className="text-center space-y-4 mb-12">
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-trust-teal to-growth-green tracking-tight">Financial Calculators</h1>
+                    <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
+                        Precision engineering for your wealth. Plan loans, investments, and withdrawals with our professional-grade suite.
                     </p>
+
+                    {/* Comparison - DESKTOP ONLY */}
+                    <div className="hidden lg:flex justify-center pt-4">
+                        <Link href="/calculators/compare" className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 hover:border-trust-teal rounded-full shadow-sm hover:shadow-md transition-all text-trust-teal font-bold group">
+                            <span>Compare Scenarios</span>
+                            <ArrowRightLeft size={16} className="group-hover:rotate-180 transition-transform duration-500" />
+                        </Link>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                    <CalculatorCard title="SIP Explorer">
-                        <SIPCalculator />
-                    </CalculatorCard>
-                    <CalculatorCard title="EMI Expert">
-                        <EMICalculator />
-                    </CalculatorCard>
-                    <CalculatorCard title="SWP Planner">
-                        <SWPCalculator />
-                    </CalculatorCard>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="group/card h-full">
+                        <CalculatorCard title="EMI Solver" description="Loan optimization & interest analysis.">
+                            <EMICalculator />
+                        </CalculatorCard>
+                    </div>
+                    <div className="group/card h-full">
+                        <CalculatorCard title="SIP Solver" description="Wealth accumulation & Step-Up planning.">
+                            <SIPCalculator />
+                        </CalculatorCard>
+                    </div>
+                    <div className="group/card h-full">
+                        <CalculatorCard title="SWP Solver" description="Retirement income & depletion analysis.">
+                            <SWPCalculator />
+                        </CalculatorCard>
+                    </div>
                 </div>
             </div>
-        </main>
+        </div>
     );
-}
+};

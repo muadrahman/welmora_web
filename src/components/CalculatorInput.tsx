@@ -6,62 +6,72 @@ interface CalculatorInputProps {
     value: number;
     onChange: (value: number) => void;
     className?: string;
+    decimalScale?: number;
 }
 
-export default function CalculatorInput({ value, onChange, className = "" }: CalculatorInputProps) {
-    const [displayValue, setDisplayValue] = useState('');
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    // Format number to Indian Currency system style (e.g., 1,50,000)
-    // We use standard NumberFormat but strip the currency symbol if we just want numbers
+export default function CalculatorInput({ value, onChange, className = "", decimalScale = 0 }: CalculatorInputProps) {
+    // Format needs to be defined before state usage if used there, or inside useMemo
     const format = (num: number) => {
         if (isNaN(num)) return '';
         return new Intl.NumberFormat('en-IN', {
-            maximumFractionDigits: 0,
+            maximumFractionDigits: decimalScale,
+            minimumFractionDigits: 0,
         }).format(num);
     };
 
-    // Update display value when prop changes (external update)
+    const [displayValue, setDisplayValue] = useState(value !== undefined ? format(value) : '');
+    const lastEmittedValue = useRef(value);
+
+    // Sync from props (External changes only)
     useEffect(() => {
-        setDisplayValue(format(value));
-    }, [value]);
+        // If value changes externally (e.g. reset to default), update display
+        if (value !== lastEmittedValue.current) {
+            setDisplayValue(format(value));
+            lastEmittedValue.current = value;
+        }
+    }, [value, decimalScale]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        // Remove commas to get raw number
+        // Allow dots if decimalScale > 0
         const rawValue = e.target.value.replace(/,/g, '');
 
-        // Allow empty input
         if (rawValue === '') {
+            lastEmittedValue.current = 0;
             onChange(0);
             setDisplayValue('');
             return;
         }
 
-        // Validate number
-        const num = Number(rawValue);
-        if (!isNaN(num)) {
-            onChange(num);
-            // We intentionally don't setDisplayValue here to avoid cursor jumping issues
-            // relying on the useEffect to format it back might be safer for "onBlur"
-            // but for real-time typing, let's try a hybrid approach or just raw typing
-            // For now, let's update display value immediately to show commas as they type
-            // Note: This causes cursor jump if we aren't careful.
-            // Simplified approach: value updates parent -> parent updates prop -> useEffect updates display
-            // BUT, to keep cursor stable we might need more complex logic.
-            // Let's stick to the requirements: "display commas in real-time".
+        // Validate number (Float)
+        const num = parseFloat(rawValue);
 
-            /* Improved cursor handling logic could go here, but starting simple */
-            setDisplayValue(format(num));
+        // Additional check: Ensure it's a valid partial number format (e.g. "10." or "10.5")
+        // Regex: Digits, optional single dot, optional digits
+        const isValidFormat = /^\d*\.?\d*$/.test(rawValue);
+
+        if (!isNaN(num) && isValidFormat) {
+            lastEmittedValue.current = num;
+            onChange(num);
+            setDisplayValue(e.target.value); // Keep exactly what user typed
+        } else if (isValidFormat && rawValue === '.') {
+            // Handle starting with dot
+            setDisplayValue('.');
         }
+    };
+
+    const handleBlur = () => {
+        // On blur, strictly re-format to ensure clean view
+        setDisplayValue(format(value));
     };
 
     return (
         <input
             type="text"
-            ref={inputRef}
             value={displayValue}
             onChange={handleChange}
+            onBlur={handleBlur}
             className={`text-right p-1 border rounded bg-white/50 text-sm font-bold text-growth-green focus:outline-none focus:ring-1 focus:ring-growth-green ${className}`}
+            suppressHydrationWarning
         />
     );
 }

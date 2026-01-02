@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import QRCodeWidget from "@/components/QRCodeWidget";
+import FixedDownloadWidget from "@/components/FixedDownloadWidget";
 
 export default function RootLayout({
   children,
@@ -27,16 +27,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-pt-[100px]">
+    <html lang="en" className="scroll-pt-[100px]" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-gray-900`}
+        suppressHydrationWarning
       >
         <Header />
         <main className="min-h-screen pt-20 relative overflow-x-hidden animate-in fade-in duration-500">
           {children}
         </main>
         <Footer />
-        <QRCodeWidget />
+        <FixedDownloadWidget />
       </body>
     </html>
   );

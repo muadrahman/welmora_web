@@ -3,98 +3,183 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 
 export default function Header() {
+    const pathname = usePathname();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [activeSection, setActiveSection] = useState('home');
     const [isScrolled, setIsScrolled] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+
+    // Prevent hydration mismatch by only rendering theme-dependent parts after mount
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     // Handle scroll active state and adaptive header
+    // Handle scroll active state with Intersection Observer
     useEffect(() => {
+        // Don't run on other pages
+        if (pathname !== '/' && !pathname?.includes('/calculators')) return;
+        if (pathname?.includes('/calculators')) return; // handled by effect below
+
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.6 // Trigger when 60% of target is visible
+        };
+
+        const observerCallback = (entries: IntersectionObserverEntry[]) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    setActiveSection(entry.target.id);
+                }
+            });
+        };
+
+        const observer = new IntersectionObserver(observerCallback, observerOptions);
+        const sections = ['home', 'features', 'support'];
+
+        sections.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) observer.observe(element);
+        });
+
+        // Fallback for top of page (Home) when Features isn't 60% visible yet
         const handleScroll = () => {
-            // Only tracking sections on the homepage for active highlighting
-            const sections = ['features', 'support'];
-            const scrollPosition = window.scrollY + 100;
-
+            if (window.scrollY < 100) setActiveSection('home');
             setIsScrolled(window.scrollY > 50);
-
-            // Check if we are on the homepage before trying to find elements
-            if (window.location.pathname === '/') {
-                if (window.scrollY < 100) {
-                    setActiveSection('home');
-                    return;
-                }
-
-                for (const section of sections) {
-                    const element = document.getElementById(section);
-                    if (element) {
-                        const offsetTop = element.offsetTop;
-                        const offsetHeight = element.offsetHeight;
-                        if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-                            setActiveSection(section);
-                            break;
-                        }
-                    }
-                }
-            }
         };
 
         window.addEventListener('scroll', handleScroll);
-        // Initial check
-        handleScroll();
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, [pathname]);
+
+    // Force active section update when pathname changes or hash is present
+    useEffect(() => {
+        if (pathname?.includes('/calculators')) {
+            setActiveSection('calculators');
+        } else if (pathname === '/') {
+            // Check for hash to set initial active state correctly
+            if (typeof window !== 'undefined' && window.location.hash === '#features') {
+                setActiveSection('features');
+            } else if (typeof window !== 'undefined' && window.location.hash === '#support') {
+                setActiveSection('support');
+            } else {
+                // Only default to home if no hash and at top
+                if (window.scrollY < 100) {
+                    setActiveSection('home');
+                }
+            }
+        }
+    }, [pathname]);
+
+    const handleLinkClick = (id: string, e?: React.MouseEvent) => {
+        // Immediate feedback
+        setActiveSection(id);
+
+        // If on homepage, smooth scroll
+        if (pathname === '/') {
+            // Let Link scroll behavior work or handle manually if needed. 
+            // With next/link to hash, it should auto-scroll. 
+            // But we want to ensure the state sticks.
+            // The Observer might flip it back if we scroll fast, but threshold 0.6 helps.
+        }
+    };
 
     // Helper to get link class
     const getLinkClass = (section: string) => {
-        const baseClass = "text-sm font-semibold px-4 py-2 rounded-full transition-all duration-300";
-        if (activeSection === section) {
+        const baseClass = "text-lg font-semibold px-4 py-2 rounded-full transition-all duration-300";
+        let isActive = activeSection === section;
+
+        if (isActive) {
             return `${baseClass} bg-growth-green/10 text-growth-green`;
         }
         return `${baseClass} text-trust-teal hover:bg-growth-green/10 hover:text-growth-green`;
     };
 
+    if (!isMounted) {
+        return (
+            <header className="fixed top-0 left-0 right-0 z-50 py-6 bg-transparent border-transparent flex items-center justify-center">
+                <div className="w-full max-w-6xl px-8 flex items-center justify-between">
+                    <span className="text-3xl font-bold text-trust-teal tracking-tight ml-3">Welmora</span>
+                </div>
+            </header>
+        );
+    }
+
     return (
         <header
-            className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-center transition-all duration-300 ${isScrolled
-                ? 'py-4 bg-white/70 backdrop-blur-md border-b border-trust-teal/10 shadow-sm'
-                : 'py-6 bg-transparent border-transparent'
-                }`}
+            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 py-3' : 'bg-transparent py-5'}`}
         >
-            <div className="w-full max-w-6xl px-8 flex items-center justify-between">
-
-                {/* Brand Container */}
-                <div className="flex items-center gap-3">
-                    {/* Logo Mark (Pulsing) */}
-                    <div className="relative h-12 w-12 animate-quiet-pulse">
+            <div className="max-w-[1440px] mx-auto px-6 md:px-12 flex items-center justify-between">
+                {/* Logo Section */}
+                <Link
+                    href="/"
+                    className="flex items-center gap-3 cursor-pointer group"
+                    onClick={(e) => {
+                        if (pathname === '/') {
+                            e.preventDefault();
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                        handleLinkClick('home');
+                    }}
+                >
+                    <div className="relative w-10 h-10 md:w-12 md:h-12 transition-transform duration-300 group-hover:scale-110">
                         <Image
                             src="/welmora-brand-icon.png"
-                            alt="Welmora Icon"
+                            alt="Welmora Logic"
                             fill
                             className="object-contain"
                             priority
                         />
                     </div>
-
-                    {/* Brand Name (Text) */}
-                    <span className="text-3xl font-bold text-trust-teal tracking-tight ml-3">
+                    <span className="text-3xl md:text-3xl font-bold text-[#064E3B] tracking-tight">
                         Welmora
                     </span>
-                </div>
+                </Link>
 
-                {/* Desktop Navigation */}
-                <nav className="hidden md:flex items-center gap-1">
-                    <Link href="/" className={getLinkClass('home')}>
-                        Home
-                    </Link>
-                    <Link href="/calculators" className={getLinkClass('calculators')}>
-                        Calculators
-                    </Link>
-                    <Link href="/#features" className={getLinkClass('features')}>
-                        Features
-                    </Link>
-                    <Link href="/#support" className={`text-sm font-semibold text-trust-teal border-[1.5px] border-growth-green rounded-full px-4 py-2 hover:bg-growth-green hover:text-white transition-all duration-300 ml-2 animate-pulse hover:animate-none ${activeSection === 'support' ? 'bg-growth-green text-white animate-none' : ''}`}>
+                {/* Desktop Navigation - Simplified & Scaled */}
+                <nav className="hidden md:flex items-center gap-4">
+                    {['Home', 'Calculators', 'Features'].map((item) => {
+                        const linkPath = item === 'Home' ? '/' :
+                            item === 'Calculators' ? '/calculators' :
+                                item === 'Features' ? '/#features' :
+                                    `/#${item.toLowerCase().replace(' ', '-')}`;
+
+                        const linkId = item.toLowerCase().replace(' ', '-');
+
+                        // Fix: Rely strictly on activeSection to avoid multi-active bug
+                        const isActive = activeSection === linkId;
+
+                        // Link Style: Text-LG, Medium Weight, Tactile Hover (Scale 1.05 + Emerald-50)
+                        const linkStyle = `text-lg font-medium px-5 py-2 rounded-full transition-all duration-300 ${isActive
+                            ? 'text-[#064E3B] bg-growth-green/10 font-bold'
+                            : 'text-gray-600 hover:text-[#064E3B] hover:bg-emerald-50 hover:scale-105 transform origin-center'
+                            }`;
+
+                        return (
+                            <Link
+                                key={item}
+                                href={linkPath}
+                                className={linkStyle}
+                                onClick={() => handleLinkClick(linkId)}
+                            >
+                                {item}
+                            </Link>
+                        );
+                    })}
+                    {/* CTA: Scaled & Authoritative */}
+                    <Link
+                        href="/#support"
+                        className={`text-xl font-bold text-trust-teal border-2 border-growth-green rounded-full px-8 py-3 hover:bg-growth-green hover:text-white transition-all duration-300 ml-4 shadow-sm hover:shadow-lg hover:shadow-growth-green/20 ${activeSection === 'support' ? 'bg-growth-green text-white shadow-lg shadow-growth-green/20' : ''}`}
+                    >
                         Contact Us
                     </Link>
                 </nav>
@@ -119,7 +204,7 @@ export default function Header() {
                         </Link>
                         <Link
                             href="/calculators"
-                            className="text-lg font-semibold text-trust-teal"
+                            className={`text-lg font-semibold ${activeSection === 'calculators' ? 'text-growth-green' : 'text-trust-teal'}`}
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             Calculators

@@ -1,80 +1,95 @@
+'use client';
+
 import React from 'react';
 import Image from 'next/image';
-import { Youtube, Instagram, Linkedin, Twitter } from 'lucide-react';
-
 import Link from 'next/link';
+import { MapPin, Mail, Youtube, Instagram, Twitter, Linkedin, Lock, ShieldCheck, Cloud } from 'lucide-react';
 
 export default function Footer() {
     return (
-        <footer className="w-full bg-[#F9FAFB] border-t border-gray-100 py-12">
-            <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
-
-                {/* Brand Column */}
-                <div className="col-span-1 flex flex-col gap-4">
-                    <div className="flex items-center gap-2 opacity-80">
-                        <div className="relative w-8 h-8">
-                            <Image
-                                src="/logo.png"
-                                alt="Welmora Logic"
-                                fill
-                                className="object-contain grayscale"
-                            />
-                        </div>
-                        <span className="font-semibold text-gray-700">Welmora</span>
-                    </div>
-                    <p className="text-gray-500 text-sm mt-2">
-                        Plan Well, Grow More.
-                    </p>
+        <footer className="w-full bg-white text-gray-900 border-t border-gray-100 font-sans">
+            {/* Trust Strip - Top Divider */}
+            <div className="w-full border-b border-gray-100 py-3 bg-gray-50/50">
+                <div className="max-w-7xl mx-auto px-6 flex justify-center gap-6 text-[10px] uppercase tracking-widest text-gray-400 font-semibold">
+                    <span className="flex items-center gap-1"><Lock size={10} /> SSL Encrypted</span>
+                    <span className="flex items-center gap-1"><ShieldCheck size={10} /> Privacy Protected</span>
+                    <span className="flex items-center gap-1"><Cloud size={10} /> Cloud Secure</span>
                 </div>
-
-                {/* Links Column 1: Company */}
-                <div className="flex flex-col gap-3">
-                    <h4 className="font-semibold text-gray-900 text-sm uppercase tracking-wider">Company</h4>
-                    <a href="#" className="text-gray-500 hover:text-trust-teal transition-colors text-sm">About Us</a>
-                    <Link href="/faq" className="text-gray-500 hover:text-trust-teal transition-colors text-sm">FAQ</Link>
-                    <a href="#" className="text-gray-500 hover:text-trust-teal transition-colors text-sm">Contact</a>
-                </div>
-
-                {/* Links Column 2: Legal */}
-                <div className="flex flex-col gap-3">
-                    <h4 className="font-semibold text-gray-900 text-sm uppercase tracking-wider">Legal</h4>
-                    <a href="#" className="text-gray-500 hover:text-trust-teal transition-colors text-sm">Privacy Policy</a>
-                    <a href="#" className="text-gray-500 hover:text-trust-teal transition-colors text-sm">Terms of Service</a>
-                </div>
-
-                {/* Links Column 3: Social */}
-                <div className="flex flex-col gap-3">
-                    <h4 className="font-semibold text-gray-900 text-sm uppercase tracking-wider">Social</h4>
-                    <div className="flex items-center gap-4">
-                        {[
-                            { Icon: Youtube, label: "YouTube" },
-                            { Icon: Instagram, label: "Instagram" },
-                            { Icon: Linkedin, label: "LinkedIn" },
-                            { Icon: Twitter, label: "Twitter" }
-                        ].map(({ Icon, label }) => (
-                            <a
-                                key={label}
-                                href="#"
-                                className="group relative text-trust-teal hover:text-growth-green transition-all duration-300 hover:scale-110 hover:-translate-y-1"
-                                aria-label={`Welmora ${label}`}
-                            >
-                                <Icon size={20} strokeWidth={1.5} />
-
-                                {/* Tooltip */}
-                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-trust-teal rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap">
-                                    {label}
-                                </span>
-                            </a>
-                        ))}
-                    </div>
-                </div>
-
             </div>
 
-            <div className="max-w-6xl mx-auto px-6 mt-12 pt-8 border-t border-gray-200">
-                <p className="text-center text-gray-400 text-sm">
-                    &copy; {new Date().getFullYear()} Welmora. All rights reserved.
-                </p>
+            <div className="max-w-7xl mx-auto px-6 py-10 md:py-12">
+                <div className="grid grid-cols-2 md:grid-cols-12 gap-y-10 gap-x-8">
+
+                    {/* BRAND & CONTACT (Left Side - Spans 5 cols on desktop, Full on mobile) */}
+                    <div className="col-span-2 md:col-span-5 lg:col-span-5 flex flex-col items-start gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className="relative w-8 h-8">
+                                <Image
+                                    src="/welmora-brand-icon.png"
+                                    alt="Welmora"
+                                    fill
+                                    className="object-contain"
+                                />
+                            </div>
+                            <span className="font-bold text-xl tracking-tight text-gray-900">Welmora</span>
+                        </div>
+
+                        <p className="text-sm font-medium text-emerald-700">
+                            Wealth. Wellness. Wisdom.
+                        </p>
+
+                        <div className="flex flex-col gap-1 text-sm text-gray-500 mt-2">
+                            <div className="flex items-center gap-2">
+                                <MapPin size={14} className="text-gray-400" />
+                                <span>Hyderabad, India</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Mail size={14} className="text-gray-400" />
+                                <a href="mailto:support@welmora.com" className="hover:text-emerald-600 transition-colors">support@welmora.com</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* RIGHT SIDE GRID (Spans 7 cols on desktop) */}
+                    <div className="col-span-2 md:col-span-7 lg:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-8">
+
+                        {/* Column 1: Company */}
+                        <div className="flex flex-col gap-3">
+                            <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wider">Company</h4>
+                            <div className="flex flex-col gap-2 text-sm text-gray-600">
+                                <Link href="/about-us" className="hover:text-emerald-600 transition-colors">About Us</Link>
+                                <Link href="/faq" className="hover:text-emerald-600 transition-colors">FAQ</Link>
+                                <Link href="/#support" className="hover:text-emerald-600 transition-colors">Contact Support</Link>
+                            </div>
+                        </div>
+
+                        {/* Column 2: Legal */}
+                        <div className="flex flex-col gap-3">
+                            <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wider">Legal</h4>
+                            <div className="flex flex-col gap-2 text-sm text-gray-600">
+                                <Link href="/privacy-policy" className="hover:text-emerald-600 transition-colors">Privacy Policy</Link>
+                                <Link href="/terms-of-service" className="hover:text-emerald-600 transition-colors">Terms of Service</Link>
+                            </div>
+                        </div>
+
+                        {/* Column 3: Social */}
+                        <div className="col-span-2 md:col-span-1 flex flex-col gap-3">
+                            <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wider">Social</h4>
+                            <div className="flex items-center gap-2">
+                                <a href="https://x.com/welmoraapp" target="_blank" className="p-2 bg-gray-50 rounded-full text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Twitter size={16} /></a>
+                                <a href="https://linkedin.com" target="_blank" className="p-2 bg-gray-50 rounded-full text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Linkedin size={16} /></a>
+                                <a href="https://instagram.com" target="_blank" className="p-2 bg-gray-50 rounded-full text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Instagram size={16} /></a>
+                                <a href="https://youtube.com" target="_blank" className="p-2 bg-gray-50 rounded-full text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Youtube size={16} /></a>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                {/* Copyright Line */}
+                <div className="mt-10 pt-6 border-t border-gray-100 flex flex-col items-center justify-center gap-4 text-xs text-gray-400">
+                    <p>&copy; {new Date().getFullYear()} Welmora. All rights reserved.</p>
+                </div>
             </div>
         </footer>
     );
