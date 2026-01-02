@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
 const WELMORA_STORE_URL = "https://play.google.com/store/apps/details?id=com.example.welmora"; // Placeholder URL
@@ -19,19 +19,11 @@ const GooglePlayLogo = () => (
 );
 
 const FixedDownloadWidget: React.FC = () => {
-    const [isMobile, setIsMobile] = useState(false);
-
-    useEffect(() => {
-        const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-        checkMobile();
-        window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
-    }, []);
-
-    if (isMobile) {
-        // MOBILE VIEW: Floating Semi-Transparent Circular Brand Buttons
-        return (
-            <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
+    // Mobile and Desktop views handled purely by CSS - no JS detection needed
+    return (
+        <>
+            {/* MOBILE VIEW: Floating Circular Brand Buttons (shown on screens < 1024px) */}
+            <div className="lg:hidden fixed bottom-6 right-6 z-[90] flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
                 <a
                     href={WELMORA_STORE_URL}
                     className="flex items-center justify-center w-12 h-12 bg-white/70 backdrop-blur-md border border-white/40 shadow-lg rounded-full text-gray-800 hover:scale-110 active:scale-95 transition-all"
@@ -47,14 +39,10 @@ const FixedDownloadWidget: React.FC = () => {
                     <GooglePlayLogo />
                 </a>
             </div>
-        );
-    }
 
-    // DESKTOP VIEW: Interactive Breathing & Floating QR
-    // V3.0: Scaled by 20% (scale-120) and gentle 5px float animation
-    return (
-        <section className="hidden lg:flex flex-col items-center justify-center fixed bottom-8 right-12 bg-white/95 backdrop-blur-sm p-5 rounded-2xl shadow-2xl border border-gray-100 gap-3 animate-float group hover:-translate-y-1 transition-transform z-50 transform origin-bottom-right ring-1 ring-black/5">
-            <style jsx>{`
+            {/* DESKTOP VIEW: Interactive QR Code Widget (shown on screens >= 1024px) */}
+            <section className="hidden lg:flex flex-col items-center justify-center fixed bottom-8 right-12 bg-white/95 backdrop-blur-sm p-5 rounded-2xl shadow-2xl border border-gray-100 gap-3 animate-float group hover:-translate-y-1 transition-transform z-[90] transform origin-bottom-right ring-1 ring-black/5">
+                <style jsx>{`
                 @keyframes float {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-5px); }
@@ -67,32 +55,33 @@ const FixedDownloadWidget: React.FC = () => {
                 }
             `}</style>
 
-            <div className="text-center space-y-0.5">
-                <span className="text-sm font-bold text-trust-teal tracking-wide block">
-                    Get Welmora
-                </span>
-                <span className="text-[10px] text-gray-500 block uppercase tracking-wider">
-                    Scan to Install
-                </span>
-            </div>
+                <div className="text-center space-y-0.5">
+                    <span className="text-sm font-bold text-trust-teal tracking-wide block">
+                        Get Welmora
+                    </span>
+                    <span className="text-[10px] text-gray-500 block uppercase tracking-wider">
+                        Scan to Install
+                    </span>
+                </div>
 
-            <div className="bg-white p-1 rounded-xl border border-gray-100 shadow-inner">
-                <QRCodeSVG
-                    value={WELMORA_STORE_URL}
-                    size={160}
-                    level="H"
-                    fgColor="#0B2C2C" // trust-teal
-                    imageSettings={{
-                        src: "/welmora-brand-icon.png", // Assuming this exists, optional
-                        x: undefined,
-                        y: undefined,
-                        height: 24,
-                        width: 24,
-                        excavate: true,
-                    }}
-                />
-            </div>
-        </section>
+                <div className="bg-white p-1 rounded-xl border border-gray-100 shadow-inner">
+                    <QRCodeSVG
+                        value={WELMORA_STORE_URL}
+                        size={160}
+                        level="H"
+                        fgColor="#0B2C2C" // trust-teal
+                        imageSettings={{
+                            src: "/welmora-brand-icon.png", // Assuming this exists, optional
+                            x: undefined,
+                            y: undefined,
+                            height: 24,
+                            width: 24,
+                            excavate: true,
+                        }}
+                    />
+                </div>
+            </section>
+        </>
     );
 };
 

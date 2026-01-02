@@ -76,10 +76,10 @@ export default function Footer() {
                         <div className="col-span-2 md:col-span-1 flex flex-col gap-3">
                             <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wider">Social</h4>
                             <div className="flex items-center gap-2">
-                                <a href="https://x.com/welmoraapp" target="_blank" className="p-2 bg-gray-50 rounded-full text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Twitter size={16} /></a>
-                                <a href="https://linkedin.com" target="_blank" className="p-2 bg-gray-50 rounded-full text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Linkedin size={16} /></a>
-                                <a href="https://instagram.com" target="_blank" className="p-2 bg-gray-50 rounded-full text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Instagram size={16} /></a>
-                                <a href="https://youtube.com" target="_blank" className="p-2 bg-gray-50 rounded-full text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Youtube size={16} /></a>
+                                <a href="https://x.com/welmoraapp" target="_blank" className="h-12 w-12 flex items-center justify-center bg-gray-50 rounded-full text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Twitter size={16} /></a>
+                                <a href="https://linkedin.com" target="_blank" className="h-12 w-12 flex items-center justify-center bg-gray-50 rounded-full text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Linkedin size={16} /></a>
+                                <a href="https://instagram.com" target="_blank" className="h-12 w-12 flex items-center justify-center bg-gray-50 rounded-full text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Instagram size={16} /></a>
+                                <a href="https://youtube.com" target="_blank" className="h-12 w-12 flex items-center justify-center bg-gray-50 rounded-full text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Youtube size={16} /></a>
                             </div>
                         </div>
 

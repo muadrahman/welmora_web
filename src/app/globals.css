@@ -3,6 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --header-height: 80px;
 }
 
 @theme inline {
@@ -41,16 +42,8 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Standardized scroll margin for all sections */
 section[id],
 div[id] {
-  scroll-margin-top: 80px;
-}
-
-
-#faq {
-  scroll-margin-top: 100px;
-}
-
-#about {
-  scroll-margin-top: 100px;
+  scroll-margin-top: var(--header-height);
 }

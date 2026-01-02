@@ -18,22 +18,37 @@ export default function Header() {
         setIsMounted(true);
     }, []);
 
-    // Handle scroll active state and adaptive header
-    // Handle scroll active state with Intersection Observer
+    // Consolidated scroll and pathname effect - no race conditions
     useEffect(() => {
-        // Don't run on other pages
-        if (pathname !== '/' && !pathname?.includes('/calculators')) return;
-        if (pathname?.includes('/calculators')) return; // handled by effect below
+        // Handle calculators page
+        if (pathname?.includes('/calculators')) {
+            setActiveSection('calculators');
+            return;
+        }
 
+        // Only run on homepage
+        if (pathname !== '/') return;
+
+        // Handle initial hash-based navigation
+        const initialHash = window.location.hash;
+        if (initialHash === '#features') {
+            setActiveSection('features');
+        } else if (initialHash === '#support') {
+            setActiveSection('support');
+        } else if (window.scrollY < 100) {
+            setActiveSection('home');
+        }
+
+        // Set up Intersection Observer for section detection
         const observerOptions = {
             root: null,
             rootMargin: '0px',
-            threshold: 0.6 // Trigger when 60% of target is visible
+            threshold: [0.2, 0.5, 0.8]
         };
 
         const observerCallback = (entries: IntersectionObserverEntry[]) => {
             entries.forEach((entry) => {
-                if (entry.isIntersecting) {
+                if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
                     setActiveSection(entry.target.id);
                 }
             });
@@ -47,7 +62,7 @@ export default function Header() {
             if (element) observer.observe(element);
         });
 
-        // Fallback for top of page (Home) when Features isn't 60% visible yet
+        // Scroll handler for adaptive header and top-of-page detection
         const handleScroll = () => {
             if (window.scrollY < 100) setActiveSection('home');
             setIsScrolled(window.scrollY > 50);
@@ -59,25 +74,6 @@ export default function Header() {
             observer.disconnect();
             window.removeEventListener('scroll', handleScroll);
         };
-    }, [pathname]);
-
-    // Force active section update when pathname changes or hash is present
-    useEffect(() => {
-        if (pathname?.includes('/calculators')) {
-            setActiveSection('calculators');
-        } else if (pathname === '/') {
-            // Check for hash to set initial active state correctly
-            if (typeof window !== 'undefined' && window.location.hash === '#features') {
-                setActiveSection('features');
-            } else if (typeof window !== 'undefined' && window.location.hash === '#support') {
-                setActiveSection('support');
-            } else {
-                // Only default to home if no hash and at top
-                if (window.scrollY < 100) {
-                    setActiveSection('home');
-                }
-            }
-        }
     }, [pathname]);
 
     const handleLinkClick = (id: string, e?: React.MouseEvent) => {
@@ -116,7 +112,7 @@ export default function Header() {
 
     return (
         <header
-            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 py-3' : 'bg-transparent py-5'}`}
+            className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 py-3' : 'bg-transparent py-5'}`}
         >
             <div className="max-w-[1440px] mx-auto px-6 md:px-12 flex items-center justify-between">
                 {/* Logo Section */}
@@ -136,8 +132,8 @@ export default function Header() {
                             src="/welmora-brand-icon.png"
                             alt="Welmora Logic"
                             fill
+                            sizes="(max-width: 768px) 40px, 48px"
                             className="object-contain"
-                            priority
                         />
                     </div>
                     <span className="text-3xl md:text-3xl font-bold text-[#064E3B] tracking-tight">
@@ -194,7 +190,7 @@ export default function Header() {
 
                 {/* Mobile Navigation Overlay */}
                 {isMobileMenuOpen && (
-                    <div className="absolute top-full left-0 right-0 bg-white border-b border-gray-100 p-6 flex flex-col gap-4 shadow-xl md:hidden animate-in slide-in-from-top-4">
+                    <div className="absolute top-full left-0 right-0 bg-white/90 backdrop-blur-xl border-b border-white/20 p-6 flex flex-col gap-4 shadow-xl md:hidden animate-in slide-in-from-top-4">
                         <Link
                             href="/"
                             className={`text-lg font-semibold ${activeSection === 'home' ? 'text-growth-green' : 'text-trust-teal'}`}

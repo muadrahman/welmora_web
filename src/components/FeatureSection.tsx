@@ -55,11 +55,11 @@ export default function FeatureSection() {
             </div>
 
             {/* 3x2 Sovereign Glass Bento Grid - One Page Fit */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {features.map((feature, index) => (
                     <div
                         key={index}
-                        className="group relative flex flex-col p-8 h-full bg-white/40 backdrop-blur-2xl border border-[#22C55E]/20 ring-1 ring-white/60 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.02)] hover:border-[#22C55E]/40 hover:shadow-[0_20px_50px_rgba(34,197,94,0.05)] hover:-translate-y-1 transition-all duration-500 overflow-hidden"
+                        className="group relative flex flex-col p-6 md:p-8 h-full bg-white/40 backdrop-blur-2xl border border-[#22C55E]/20 ring-1 ring-white/60 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.02)] hover:border-[#22C55E]/40 hover:shadow-[0_20px_50px_rgba(34,197,94,0.05)] hover:-translate-y-1 transition-all duration-500 overflow-hidden"
                     >
 
                         <div className="w-12 h-12 bg-white/60 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-growth-green/10 transition-colors duration-500 shadow-sm border border-white/50">

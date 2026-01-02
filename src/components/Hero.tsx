@@ -6,6 +6,7 @@ import AppStoreButtons from './AppStoreButtons';
 import InteractiveCandlesticks from './InteractiveCandlesticks';
 
 export default function Hero() {
+    // Motion values for spotlight effect - auto-cleanup handled by Framer Motion
     const x = useMotionValue(0);
     const y = useMotionValue(0);
     const [isMounted, setIsMounted] = useState(false);
@@ -86,15 +87,15 @@ export default function Hero() {
             )}
 
             {/* 3. Main Content - High-Impact Optical Shift (10% up) */}
-            <main className="relative z-12 flex flex-col items-center gap-4 text-center w-full max-w-[1440px] px-4 animate-in fade-in zoom-in duration-500 -translate-y-[8vh] md:-translate-y-[12vh]">
+            <main className="relative z-12 flex flex-col items-center gap-4 text-center w-full max-w-full px-6 md:px-4 md:max-w-[1440px] animate-in fade-in zoom-in duration-500 -translate-y-[8vh] md:-translate-y-[12vh]">
 
-                {/* Main Heading - Authority Scale: text-8xl (Desktop) */}
-                <h1 className="text-5xl md:text-7xl lg:text-10xl font-bold text-[#064E3B] tracking-tighter drop-shadow-sm leading-none text-wrap break-words">
+                {/* Main Heading - Responsive Scale: Mobile-First Authority */}
+                <h1 className="text-5xl md:text-7xl lg:text-9xl xl:text-10xl font-bold text-[#064E3B] tracking-tighter drop-shadow-sm leading-none break-words max-w-full">
                     Plan Well, Grow More
                 </h1>
 
                 {/* Sub-heading - Closer & Contrast */}
-                <p className="text-xl md:text-2xl text-slate-600 font-normal tracking-tight leading-relaxed max-w-2xl px-4 mt-0">
+                <p className="text-xl md:text-2xl text-slate-600 font-normal tracking-tight leading-relaxed max-w-2xl px-6 md:px-4 mt-0">
                     Your Digital Financial Consultant for Long-Term Wealth.
                 </p>
 
